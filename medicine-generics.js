@@ -1,118 +1,139 @@
+// medicine-generics.js
 (function () {
-  var $ = id => document.getElementById(id);
-  var norm = s => (s||"").toLowerCase().replace(/[+&,\/()%-]/g," ").replace(/\s+/g," ").trim();
+  var $ = function(id){ return document.getElementById(id); };
+  var norm = function(s){ return (s||"").toLowerCase().replace(/[+&,\/()%-]/g," ").replace(/\s+/g," ").trim(); };
 
-  var DATA = window.MEDICINE_GENERICS || [];
-  var INDEXED = false;
-  var PAGE_SIZE = 50;
-  var currentPage = 0;
-  var activeResults = [];
+  var DATA=[], INDEXED=false, active=[], cursor=0;
+  var PAGE_SIZE=60, BATCH_SIZE=30; // tune as needed
 
-  function buildIndex() {
+  function ensureIndex(){
     if (INDEXED) return;
-    DATA.forEach(it => {
-      const labels = (it.dosages||[]).map(d => d.label||"").join(" ");
-      it._norm = norm((it.name||"")+" "+labels);
-    });
-    INDEXED = true;
+    for (var i=0;i<DATA.length;i++){
+      var it=DATA[i], labels="";
+      if (it.dosages && it.dosages.length){
+        var tmp=[];
+        for (var j=0;j<it.dosages.length;j++){
+          var d=it.dosages[j]; tmp.push(d.label||d.name||d.dosage||d.text||"");
+        }
+        labels = tmp.join(" ");
+      }
+      it._norm = norm((it.name||it.generic||"") + " " + labels);
+    }
+    INDEXED=true;
   }
 
-  function buildRow(item) {
-    var wrap = document.createElement("div");
-    wrap.className = "generic-item";
-
-    var h2 = document.createElement("h2");
-    h2.className = "generic-title";
-    h2.textContent = item.name || "";
-    wrap.appendChild(h2);
-
-    var ul = document.createElement("ul");
-    ul.className = "dosage-list";
-    (item.dosages||[]).forEach(d => {
-      var li = document.createElement("li");
-      var a = document.createElement("a");
-      a.href = d.url || "#";
-      a.target = "_blank";
-      a.textContent = d.label || "";
-      li.appendChild(a);
-      ul.appendChild(li);
-    });
+  function buildRow(it){
+    var wrap=document.createElement("div"); wrap.className="generic-item";
+    var h2=document.createElement("h2"); h2.className="generic-title"; h2.textContent=it.name||it.generic||""; wrap.appendChild(h2);
+    var ul=document.createElement("ul"); ul.className="dosage-list";
+    if (it.dosages && it.dosages.length){
+      for (var k=0;k<it.dosages.length;k++){
+        var d=it.dosages[k], li=document.createElement("li"), a=document.createElement("a");
+        a.href=d.url||d.link||"#"; a.target="_blank"; a.textContent=d.label||d.name||d.dosage||d.text||"";
+        li.appendChild(a); ul.appendChild(li);
+      }
+    }
     wrap.appendChild(ul);
-
     return wrap;
   }
 
-  function renderNextPage() {
-    var listEl = $("genericList");
-    var start = currentPage * PAGE_SIZE;
-    var end = Math.min(start + PAGE_SIZE, activeResults.length);
+  function renderNext(){
+    var list=$("genericList");
+    if (!list) return;
+    var end=Math.min(cursor+PAGE_SIZE, active.length);
+    if (cursor>=end) return;
 
-    if (start >= activeResults.length) return;
-
-    var frag = document.createDocumentFragment();
-    for (var i = start; i < end; i++) {
-      frag.appendChild(buildRow(activeResults[i]));
+    var i=cursor;
+    function frame(){
+      var frag=document.createDocumentFragment();
+      for (var cnt=0; cnt<BATCH_SIZE && i<end; cnt++, i++){
+        frag.appendChild(buildRow(active[i]));
+      }
+      list.appendChild(frag);
+      if (i<end){ requestAnimationFrame(frame); }
+      else { cursor=end; updateMore(); }
     }
-    listEl.appendChild(frag);
-
-    currentPage++;
-    updateShowMore();
+    requestAnimationFrame(frame);
   }
 
-  function updateShowMore() {
-    var btn = $("showMoreBtn");
+  function updateMore(){
+    var btn=$("showMoreBtn");
     if (!btn) return;
-    btn.style.display = (currentPage * PAGE_SIZE < activeResults.length) ? "block" : "none";
+    btn.style.display = cursor < active.length ? "block" : "none";
   }
 
-  function runSearch(query) {
-    buildIndex();
-    const words = norm(query).split(" ");
-    activeResults = DATA.filter(it => words.every(w => it._norm.includes(w)));
-    currentPage = 0;
-    $("genericList").innerHTML = "";
-    if (activeResults.length === 0) {
-      $("genericList").innerHTML = "<p>No matches found.</p>";
-      $("showMoreBtn").style.display = "none";
+  function resetAndRender(){
+    var list=$("genericList");
+    if (!list) return;
+    list.innerHTML="";
+    cursor=0;
+    renderNext();
+  }
+
+  function onSearch(){
+    var input=$("genericSearch");
+    if (!input) return;
+    var q=norm(input.value||"");
+    if (q.length<2){
+      active=DATA;            // default view when query is short/empty
+      resetAndRender();
       return;
     }
-    renderNextPage();
-  }
-
-  function init() {
-    var input = $("genericSearch");
-    var listEl = $("genericList");
-    var btn = document.createElement("button");
-    btn.id = "showMoreBtn";
-    btn.textContent = "Show more";
-    btn.style.display = "none";
-    btn.style.margin = "16px auto";
-    btn.style.padding = "8px 16px";
-    btn.style.border = "1px solid #ccc";
-    btn.style.borderRadius = "6px";
-    btn.style.background = "#fff";
-    btn.style.cursor = "pointer";
-    btn.onclick = renderNextPage;
-    listEl.insertAdjacentElement("afterend", btn);
-
-    // Initial default load (first PAGE_SIZE items)
-    activeResults = DATA;
-    renderNextPage();
-
-    // Wire up search
-    input.addEventListener("input", function () {
-      const q = this.value.trim();
-      if (q.length < 2) {
-        activeResults = DATA;
-        currentPage = 0;
-        $("genericList").innerHTML = "";
-        renderNextPage();
-      } else {
-        runSearch(q);
+    ensureIndex();
+    var words=q.split(" "), res=[];
+    for (var i=0;i<DATA.length;i++){
+      var hay=DATA[i]._norm, ok=true;
+      for (var w=0; w<words.length; w++){
+        if (hay.indexOf(words[w])===-1){ ok=false; break; }
       }
-    });
+      if (ok) res.push(DATA[i]);
+    }
+    active=res;
+    resetAndRender();
   }
 
-  // Wait until DOM is ready
-  document.addEventListener("DOMContentLoaded", init);
+  function init(){
+    var input=$("genericSearch"), list=$("genericList");
+    if (!input || !list || !window.MEDICINE_GENERICS) return false;
+
+    DATA = window.MEDICINE_GENERICS;
+    active = DATA;
+
+    // Create a "Show more" button under the list (no HTML change needed)
+    var btn=$("showMoreBtn");
+    if (!btn){
+      btn=document.createElement("button");
+      btn.id="showMoreBtn"; btn.type="button"; btn.textContent="Show more";
+      btn.style.margin="16px 0"; btn.style.padding="8px 16px";
+      btn.style.border="1px solid #d9d9d9"; btn.style.borderRadius="6px";
+      btn.style.background="#fff"; btn.style.cursor="pointer";
+      list.insertAdjacentElement("afterend", btn);
+    }
+    btn.onclick=renderNext;
+
+    // Initial render (first page only)
+    resetAndRender();
+
+    // Search bindings (some CMS block 'input'—bind keyup too)
+    input.oninput = onSearch;
+    input.onkeyup = onSearch;
+
+    // Optional: auto-load more on scroll near bottom
+    window.addEventListener("scroll", function(){
+      if (cursor>=active.length) return;
+      var nearBottom = window.innerHeight + window.pageYOffset >= document.body.offsetHeight - 200;
+      if (nearBottom) renderNext();
+    });
+
+    return true;
+  }
+
+  // Boot without DOMContentLoaded (poll until DOM + data exist)
+  (function boot(){
+    var tries=0, t=setInterval(function(){
+      tries++;
+      if (init()) { clearInterval(t); }
+      if (tries>400) clearInterval(t); // ~20s safety
+    },50);
+  })();
 })();
