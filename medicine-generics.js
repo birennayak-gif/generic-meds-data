@@ -1,18 +1,18 @@
-// medicine-generics.js
 (function () {
   var $ = id => document.getElementById(id);
   var norm = s => (s||"").toLowerCase().replace(/[+&,\/()%-]/g," ").replace(/\s+/g," ").trim();
 
-  var DATA = null;
+  var DATA = window.MEDICINE_GENERICS || [];
   var INDEXED = false;
-  var SHOW_LIMIT = 120;
-  var BATCH_SIZE = 40;
+  var PAGE_SIZE = 50;
+  var currentPage = 0;
+  var activeResults = [];
 
   function buildIndex() {
-    if (!DATA || INDEXED) return;
+    if (INDEXED) return;
     DATA.forEach(it => {
-      var labels = (it.dosages||[]).map(d => d.label||"").join(" ");
-      it._norm = norm((it.name||"") + " " + labels);
+      const labels = (it.dosages||[]).map(d => d.label||"").join(" ");
+      it._norm = norm((it.name||"")+" "+labels);
     });
     INDEXED = true;
   }
@@ -29,11 +29,11 @@
     var ul = document.createElement("ul");
     ul.className = "dosage-list";
     (item.dosages||[]).forEach(d => {
-      var li=document.createElement("li");
-      var a=document.createElement("a");
-      a.href = d.url||"#";
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.href = d.url || "#";
       a.target = "_blank";
-      a.textContent = d.label||"";
+      a.textContent = d.label || "";
       li.appendChild(a);
       ul.appendChild(li);
     });
@@ -42,74 +42,77 @@
     return wrap;
   }
 
-  function renderList(listEl, items) {
-    listEl.innerHTML = "";
-    if (!items.length) { listEl.innerHTML = "<p>No matches found.</p>"; return; }
+  function renderNextPage() {
+    var listEl = $("genericList");
+    var start = currentPage * PAGE_SIZE;
+    var end = Math.min(start + PAGE_SIZE, activeResults.length);
 
-    let i = 0;
-    function step() {
-      var frag = document.createDocumentFragment();
-      for (var c=0; c<BATCH_SIZE && i<items.length; c++, i++) {
-        frag.appendChild(buildRow(items[i]));
-      }
-      listEl.appendChild(frag);
-      if (i < items.length) requestAnimationFrame(step);
+    if (start >= activeResults.length) return;
+
+    var frag = document.createDocumentFragment();
+    for (var i = start; i < end; i++) {
+      frag.appendChild(buildRow(activeResults[i]));
     }
-    requestAnimationFrame(step);
+    listEl.appendChild(frag);
+
+    currentPage++;
+    updateShowMore();
   }
 
-  function wireSearch() {
+  function updateShowMore() {
+    var btn = $("showMoreBtn");
+    if (!btn) return;
+    btn.style.display = (currentPage * PAGE_SIZE < activeResults.length) ? "block" : "none";
+  }
+
+  function runSearch(query) {
+    buildIndex();
+    const words = norm(query).split(" ");
+    activeResults = DATA.filter(it => words.every(w => it._norm.includes(w)));
+    currentPage = 0;
+    $("genericList").innerHTML = "";
+    if (activeResults.length === 0) {
+      $("genericList").innerHTML = "<p>No matches found.</p>";
+      $("showMoreBtn").style.display = "none";
+      return;
+    }
+    renderNextPage();
+  }
+
+  function init() {
     var input = $("genericSearch");
     var listEl = $("genericList");
-    if (!input || !listEl) return false;
+    var btn = document.createElement("button");
+    btn.id = "showMoreBtn";
+    btn.textContent = "Show more";
+    btn.style.display = "none";
+    btn.style.margin = "16px auto";
+    btn.style.padding = "8px 16px";
+    btn.style.border = "1px solid #ccc";
+    btn.style.borderRadius = "6px";
+    btn.style.background = "#fff";
+    btn.style.cursor = "pointer";
+    btn.onclick = renderNextPage;
+    listEl.insertAdjacentElement("afterend", btn);
 
-    listEl.innerHTML = "<p>Type at least 2 characters to search generics.</p>";
+    // Initial default load (first PAGE_SIZE items)
+    activeResults = DATA;
+    renderNextPage();
 
-    input.oninput = function () {
-      var q = norm(this.value);
+    // Wire up search
+    input.addEventListener("input", function () {
+      const q = this.value.trim();
       if (q.length < 2) {
-        listEl.innerHTML = "<p>Type at least 2 characters to search generics.</p>";
-        return;
+        activeResults = DATA;
+        currentPage = 0;
+        $("genericList").innerHTML = "";
+        renderNextPage();
+      } else {
+        runSearch(q);
       }
-
-      buildIndex();
-
-      var words = q.split(" ");
-      var results = [];
-      for (var i=0; i<DATA.length; i++) {
-        var hay = DATA[i]._norm;
-        if (words.every(w => hay.includes(w))) {
-          results.push(DATA[i]);
-          if (results.length >= SHOW_LIMIT) break;
-        }
-      }
-
-      renderList(listEl, results);
-
-      if (results.length === SHOW_LIMIT) {
-        var note = document.createElement("p");
-        note.style.marginTop = "8px";
-        note.style.fontSize = "12px";
-        note.style.color = "#666";
-        note.textContent = "Showing first " + SHOW_LIMIT + " results. Refine your search.";
-        listEl.appendChild(note);
-      }
-    };
-
-    return true;
+    });
   }
 
-  (function boot() {
-    var tries = 0;
-    var t = setInterval(function(){
-      tries++;
-      var ok = $("genericSearch") && $("genericList") && window.MEDICINE_GENERICS;
-      if (ok) {
-        clearInterval(t);
-        DATA = window.MEDICINE_GENERICS;
-        wireSearch();
-      }
-      if (tries > 400) clearInterval(t);
-    }, 50);
-  })();
+  // Wait until DOM is ready
+  document.addEventListener("DOMContentLoaded", init);
 })();
