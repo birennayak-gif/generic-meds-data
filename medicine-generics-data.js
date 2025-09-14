@@ -1,4 +1,5 @@
-window.MEDICINE_GENERICS = [{"name":"1-3 Butylene Glycol+Aqua+Dimethicone+Propanediol+Triethanolamine","dosages":[{"label":"1-3 Butylene Glycol+Aqua+Dimethicone+Propanediol+Triethanolamine","url":"/c/generic-substitutes?genericwithdosageid=69816&itemtype=Gel&contains=1-3%20Butylene%20Glycol%2BAqua%2BDimethicone%2BPropanediol%2BTriethanolamine"}]},
+window.MEDICINE_GENERICS = [
+  {"name":"1-3 Butylene Glycol+Aqua+Dimethicone+Propanediol+Triethanolamine","dosages":[{"label":"1-3 Butylene Glycol+Aqua+Dimethicone+Propanediol+Triethanolamine","url":"/c/generic-substitutes?genericwithdosageid=69816&itemtype=Gel&contains=1-3%20Butylene%20Glycol%2BAqua%2BDimethicone%2BPropanediol%2BTriethanolamine"}]},
 {"name":"2+4-Dichlorobenzyl Alcohol+Amylmetacresol","dosages":[{"label":"2- 4-Dichlorobenzyl Alcohol 1.2 mg+Amylmetacresol 0.6 mg","url":"/c/generic-substitutes?genericwithdosageid=31956&itemtype=LOZENGES&contains=2-%204-Dichlorobenzyl%20Alcohol%201.2%20mg%2BAmylmetacresol%200.6%20mg"}]},
 {"name":"2-Pyridine Aldoxime Methiodide","dosages":[{"label":"2-Pyridine Aldoxime Methiodide 25 mg","url":"/c/generic-substitutes?genericwithdosageid=20250&itemtype=INJECTION&contains=2-Pyridine%20Aldoxime%20Methiodide%2025%20mg"}]},
 {"name":"3-N-Butylphthalide+Nicotinamide","dosages":[{"label":"3-N-Butylphthalide 200 mg+Nicotinamide 5 mg","url":"/c/generic-substitutes?genericwithdosageid=76289&itemtype=Capsule&releasetypename=Immediate%20Release&contains=3-N-Butylphthalide%20200%20mg%2BNicotinamide%205%20mg"}]},
@@ -9543,4 +9544,9 @@ window.MEDICINE_GENERICS = [{"name":"1-3 Butylene Glycol+Aqua+Dimethicone+Propan
 {"label":"Zopiclone 7.5 mg","url":"/c/generic-substitutes?genericwithdosageid=3200&itemtype=TABLET&contains=Zopiclone%207.5%20mg"}]},
 {"name":"Zotepine","dosages":[{"label":"Zotepine 100 mg","url":"/c/generic-substitutes?genericwithdosageid=31842&itemtype=TABLET&contains=Zotepine%20100%20mg"},
 {"label":"Zotepine 25 mg","url":"/c/generic-substitutes?genericwithdosageid=31850&itemtype=TABLET&contains=Zotepine%2025%20mg"},
-{"label":"Zotepine 50 mg","url":"/c/generic-substitutes?genericwithdosageid=31848&itemtype=TABLET&contains=Zotepine%2050%20mg"}]}];
+{"label":"Zotepine 50 mg","url":"/c/generic-substitutes?genericwithdosageid=31848&itemtype=TABLET&contains=Zotepine%2050%20mg"}]}
+  ];
+
+if (window.initGenerics) {
+  window.initGenerics(window.MEDICINE_GENERICS);
+}
