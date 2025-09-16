@@ -28,40 +28,47 @@
   }
 
   function buildRow(it){
-    var wrap = document.createElement("div");
-    wrap.className = "generic-item";
+  var wrap = document.createElement("div");
+  wrap.className = "generic-item";
 
-    var h2 = document.createElement("h2");
-    h2.className = "generic-title";
-    h2.textContent = it.name || it.generic || "";
-    wrap.appendChild(h2);
+  // Generic title
+  var h2 = document.createElement("h2");
+  h2.className = "generic-title";
+  h2.textContent = it.name || it.generic || "";
+  wrap.appendChild(h2);
 
-    var ul = document.createElement("ul");
-    ul.className = "dosage-list";
+  // Dosages
+  var ul = document.createElement("ul");
+  ul.className = "dosage-list";
 
-    if (it.dosages && it.dosages.length){
-      for (var k=0; k<it.dosages.length; k++){
-        var d = it.dosages[k];
-        var li = document.createElement("li");
-        var a = document.createElement("a");
+  if (it.dosages && it.dosages.length){
+    for (var k=0; k<it.dosages.length; k++){
+      var d = it.dosages[k];
+      var li = document.createElement("li");
+      var a = document.createElement("a");
 
-        // Normalize text
-        var text = "";
-        if (typeof d === "string") text = d;
-        else if (d && typeof d === "object") text = d.label || d.name || d.dosage || d.text || "";
-
-        a.href = (d.url || d.link || "#");
-        a.target = "_blank";
-        a.textContent = text;
-
-        li.appendChild(a);
-        ul.appendChild(li);
+      // Normalization
+      var text = "";
+      if (typeof d === "string") {
+        text = d;
+        a.href = "#";
+      } else if (d && typeof d === "object") {
+        text = d.label || d.name || d.dosage || d.text || "";
+        a.href = d.url || d.link || "#";
       }
-    }
 
-    wrap.appendChild(ul);
-    return wrap;
+      a.target = "_blank";
+      a.textContent = text;
+
+      li.appendChild(a);
+      ul.appendChild(li);
+    }
   }
+
+  wrap.appendChild(ul);
+  return wrap;
+}
+
 
   function renderList(){
     var list = $("genericList");
