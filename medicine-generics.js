@@ -7,25 +7,31 @@
   var INDEXED = false;
   var active = [];
 
-  function ensureIndex(){
-    if (INDEXED) return;
-    for (var i=0; i<DATA.length; i++){
-      var it = DATA[i], labels = "";
-      if (it.dosages && it.dosages.length){
-        var tmp=[];
-        for (var j=0; j<it.dosages.length; j++){
-          var d = it.dosages[j];
-          var txt = "";
-          if (typeof d === "string") txt = d;
-          else if (d && typeof d === "object") txt = d.label || d.name || d.dosage || d.text || "";
-          tmp.push(txt);
-        }
-        labels = tmp.join(" ");
+ function ensureIndex(){
+  if (INDEXED) return;
+  for (var i=0; i<DATA.length; i++){
+    var it = DATA[i], labels = "";
+
+    if (it.dosages && it.dosages.length){
+      var tmp=[];
+      for (var j=0; j<it.dosages.length; j++){
+        var d = it.dosages[j];
+        var txt = "";
+
+        if (typeof d === "string") txt = d;
+        else if (d && typeof d === "object") txt = d.label || d.name || d.dosage || d.text || "";
+
+        tmp.push(txt);
       }
-      it._norm = norm((it.name||it.generic||"") + " " + labels);
+      labels = tmp.join(" ");
     }
-    INDEXED = true;
+
+    // 👇 add dosage text into normalized string
+    it._norm = norm((it.name||it.generic||"") + " " + labels);
   }
+  INDEXED = true;
+}
+
 
   function buildRow(it){
   var wrap = document.createElement("div");
